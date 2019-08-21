@@ -1,0 +1,75 @@
+# Python Flask CI/CD on OpenShift
+## Overview
+This document describes different Python Flask development use cases supported on OpenShift.
+
+Reference environments:
+Minishift - OCP3 minimal environment running locally
+
+Reference project: 
+
+## Build Environment
+Flask is a Python web framework so a working Python setup is required. Pip is standard package manager for Python. To install Flask use:
+pip install flask flask_restful
+
+Clone the project:
+git clone 
+
+In pip projects file requirements.txt lists required dependencies
+Install dependencies:
+pip install -r requirements.txt
+
+Run the app:
+python app.py
+
+At this point the app is available as a service and can be accessed using curl or a web browser.
+
+## Tests
+Test automation is an essential part of CI/CD, it makes it possible to test fast and test early, providing quick feedback on the impact of new changes.
+It is a good practice to run fast-running tests (like unit tests) as part of every build as a basic acceptance criteria for its success.
+Another important metric is code test coverage. If tests are not testing a significant part of the application running them might not reveal introduced regressions. Thus test coverage percentage of the code below a certain threshold might be an acceptance criteria in a build.
+Only if and when those acceptance criteria are satisfied the build should proceed to a packaging step.
+
+## Packaging: Docker
+The application ready for deployment is packaged in a Docker container image which can run locally on the development environment or deployed to different testing, staging and production environments. In general Docker containers are described by Dockerfiles. Docker container images are built from Dockerfiles and used as immutable artifacts in development and testing scenarios.
+Alternatively, S2I builds can be used on OpenShift.
+### Generic Docker
+An application running as a service can be packaged, distributed and deployed as a Docker container image. For that a Dockerfile can be put together with the application source so it is readily available for a build creating an image as an artifact.
+For compatibility and compliance purposes it is recommended for apps deploying to Openshift to inherit from Red Hat images.
+
+Dockerfile for a basic Flask app:
+FROM registry.redhat.io/rhscl/python-35-rhel7
+MAINTANER Your Name "youremail@domain.tld"
+COPY ./requirements.txt /app/requirements.txt
+WORKDIR /app
+RUN pip install -r requirements.txt
+COPY . /app
+ENTRYPOINT [ "python" ]
+CMD [ "app.py" ]
+
+To build an image from this file:
+docker build -t flask-app-image .
+
+To run the app locally:
+docker run -d -p 5000:5000 flask-app-image
+
+At this point the app can be accessed locally using curl, a web browser or testing tools like Selenium or Postman:
+
+curl http://localhost:5000/
+
+### Source-to-Image
+Source-to-Image (S2I) is a toolkit and workflow for building reproducible container images from source code. This workflow used by developers would require s2i utility installed locally.
+
+### Docker Image Registry
+Docker images created as a result of a build can be published to Docker image registries. OpenShift provides an integrated Docker registry which can be used for development as well.
+Images are pushed to a registry with docker push command.
+
+## Continuous Integration
+In software engineering, continuous integration (CI) is the practice of merging all developers' working copies to a shared mainline several times a day. When merges occur they trigger automated verification processes - builds. Jenkins CI is a popular CI automation server well integrated in Openshift. Another growing in popularity alternative is GitLab. Both implement Continuous Delivery pipelines. Jenkins uses a DSL language similar to Groovy to script Jenkins pipelines.
+￼￼### Jenkins
+Jenkins is supported by Openshift cluster out of the box. Jenkins instances can be running on it, use its resources for builds and tests and deploy to Openshift. Openshift provides 2 templates: with and without persistent storage. Openshift pipeline builds use Jenkins to run these pipelines. Openshift can use Jenkins instances running on it, it can auto-provision Jenkins or it can use Jenkins services running externally.
+By default Jenkins running on Openshift cluster is integrated with its OAuth, i.e. Openshift users can authenticate on Jenkins too. Jenkins instance can be customized to use its own authentication mechanisms.
+
+#### Agents
+Out of the box Openshift Jenkins supports Base, Maven and Node.js agent images. 
+
+## Deployment
