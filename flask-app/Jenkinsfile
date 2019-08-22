@@ -1,0 +1,49 @@
+/**
+* Sample Jenkinsfile
+* It shows hot to build a Docker image
+ */
+pipeline {
+  agent {
+    node {
+      label 'python'
+    }
+  }
+  options {
+    timeout(time: 10, unit: 'MINUTES')
+  }
+  environment {
+    templatePath = 'ssh://rmp-bot@gerrit.it.here.com:29418/olp/ingestion'
+  }
+  stages {
+    stage('Init') {
+      steps {
+        script {
+          openshift.withCluster() {
+            openshift.withProject() {
+              echo "Using project: ${openshift.project()}"
+              sh 'python --version'
+              sh 'pip --version'
+            }
+          }
+        }
+      }
+    }
+    stage('SCM') {
+      steps {
+        git url: 'https://github.com/dav1dli/flask-ci-doc.git'
+      }
+    }
+    stage('Test') {
+      steps {
+        dir ('flask-app') {
+          sh '''
+            pip install -r requirements.txt --user
+            python run.py &
+            nosetests app --with-xunit
+          '''
+          junit "nosetests.xml"
+        }
+      }
+    }
+  }
+}
