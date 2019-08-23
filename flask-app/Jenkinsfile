@@ -14,6 +14,7 @@ pipeline {
   environment {
     templatePath = 'ssh://rmp-bot@gerrit.it.here.com:29418/olp/ingestion'
     templateName = 'flask-app'
+    servicePort = '8080'
   }
   stages {
     stage('Init') {
@@ -58,7 +59,7 @@ pipeline {
         }
       }
       steps{
-        echo "Build Docker image"
+        echo "Create Docker image Build"
         dir ('flask-app') {
           script {
             openshift.withCluster() {
@@ -68,6 +69,65 @@ pipeline {
             }
           }
         }
+      }
+    }
+    stage('Build') {
+      steps {
+        script {
+          openshift.withCluster() {
+            openshift.withProject() {
+              openshift.selector("bc", "${templateName}").startBuild("--from-dir=flask-app", "--wait=true")
+            }
+          }
+        }
+      }
+    }
+    stage('Deploy') {
+      when {
+        expression {
+          openshift.withCluster() {
+            openshift.withProject() {
+              return !openshift.selector("dc", "${templateName}").exists();
+            }
+          }
+        }
+      }
+      steps{
+        echo "Deploy docker image build"
+          script {
+            openshift.withCluster() {
+              openshift.withProject() {
+                def app = openshift.newApp("${templateName}:latest")
+                app.narrow("svc").expose("--port=${servicePort}")
+                def dc = openshift.selector("dc", "${templateName}")
+                while (dc.object().spec.replicas != dc.object().status.availableReplicas) {
+                    sleep 10
+                }
+              }
+            }
+          }
+      }
+    }
+    stage('TestAPI') {
+      when {
+        expression {
+          openshift.withCluster() {
+            openshift.withProject() {
+              return openshift.selector("route", "${templateName}").exists();
+            }
+          }
+        }
+      }
+      steps{
+        echo "Test deployed build"
+          script {
+            openshift.withCluster() {
+              openshift.withProject() {
+                def route = openshift.selector("route", "${templateName}")
+                sh "curl -v http://`oc get route ${templateName} -o jsonpath='{.spec.host}'`"
+              }
+            }
+          }
       }
     }
   }
