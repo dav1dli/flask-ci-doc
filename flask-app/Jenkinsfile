@@ -63,7 +63,7 @@ pipeline {
           script {
             openshift.withCluster() {
               openshift.withProject() {
-                openshift.newBuild("--name=${templateName}", "--strategy docker", "--docker-image=myproject/python", "--binary=true")
+                openshift.newBuild("--name=${templateName}", "--strategy docker", "--docker-image=rhscl/python-36-rhel7", "--binary=true")
               }
             }
           }
