@@ -13,6 +13,7 @@ pipeline {
   }
   environment {
     templatePath = 'ssh://rmp-bot@gerrit.it.here.com:29418/olp/ingestion'
+    templateName = 'flask-app'
   }
   stages {
     stage('Init') {
@@ -39,9 +40,32 @@ pipeline {
           sh '''
             pip install -r requirements.txt --user
             python run.py &
-            nosetests app --with-xunit
+            nosetests . --with-xunit
           '''
           junit "nosetests.xml"
+        }
+      }
+    }
+    stage('NewBuild') {
+      when {
+        expression {
+          openshift.withCluster() {
+            openshift.withProject() {
+              return !openshift.selector("bc", "${templateName}").exists();
+            }
+          }
+        }
+      }
+      steps{
+        echo "Build Docker image"
+        dir ('flask-app') {
+          script {
+            openshift.withCluster() {
+              openshift.withProject() {
+                openshift.newBuild("--name=${templateName}", "--strategy docker", "--docker-image=172.30.1.1:5000/openshift/python", "--binary=true")
+              }
+            }
+          }
         }
       }
     }
