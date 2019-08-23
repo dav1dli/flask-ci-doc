@@ -1,4 +1,4 @@
-FROM openshift/python
+FROM myproject/python
 ADD . .
 RUN pip install -r requirements.txt
 EXPOSE 8080

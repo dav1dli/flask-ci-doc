@@ -22,11 +22,12 @@ pipeline {
           openshift.withCluster() {
             openshift.withProject() {
               echo "Using project: ${openshift.project()}"
-              sh 'python --version'
-              sh 'pip --version'
             }
           }
         }
+        sh 'python --version'
+        sh 'pip --version'
+        sh 'rm -rf .git jenkins-agent flask-app'
       }
     }
     stage('SCM') {
@@ -62,7 +63,7 @@ pipeline {
           script {
             openshift.withCluster() {
               openshift.withProject() {
-                openshift.newBuild("--name=${templateName}", "--strategy docker", "--docker-image=172.30.1.1:5000/openshift/python", "--binary=true")
+                openshift.newBuild("--name=${templateName}", "--strategy docker", "--docker-image=myproject/python", "--binary=true")
               }
             }
           }
