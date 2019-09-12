@@ -12,11 +12,12 @@ pipeline {
     timeout(time: 10, unit: 'MINUTES')
   }
   environment {
-    templatePath = 'ssh://rmp-bot@gerrit.it.here.com:29418/olp/ingestion'
-    templateName = 'flask-app'
+    templateName = 'python-app'
     servicePort = '8080'
-    qaEnv = 'myqa'
+    qaEnv = 'demo-qa'
+    stageEnv = 'demo-stage'
     qaTag = 'QA'
+    stageTag = 'Staging'
   }
   stages {
     stage('Init') {
